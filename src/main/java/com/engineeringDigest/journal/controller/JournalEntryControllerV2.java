@@ -3,12 +3,14 @@ package com.engineeringDigest.journal.controller;
 
 import com.engineeringDigest.journal.entity.JournalEntry;
 
+import com.engineeringDigest.journal.exceptions.JournalNotFoundException;
 import com.engineeringDigest.journal.service.JournalEntryService;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -36,29 +38,31 @@ public class JournalEntryControllerV2 {
         return myEntry;
     }
 
-    @GetMapping("/id/{myId}")
-    public JournalEntry getbyId(@PathVariable ObjectId myId){
-        return journalEntryService.findById(myId).orElse(null);
+    @GetMapping("/{myId}")
+    public ResponseEntity<JournalEntry> getbyId(@PathVariable ObjectId myId){
+
+        Optional<JournalEntry> journalEntry = journalEntryService.findById(myId);
+        if (journalEntry.isPresent()){
+            return new ResponseEntity<>(journalEntry.get(),HttpStatus.OK);
+        }
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
-    @DeleteMapping("/id/{myId}")
+    @DeleteMapping("/{myId}")
     public JournalEntry deletebyId(@PathVariable ObjectId myId){
-        JournalEntry deleted = journalEntryService.findById(myId).orElse(null);
-        if (deleted == null){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "JournalEntry not found with id: " + myId);
-        }
+        JournalEntry deleted = journalEntryService.findById(myId).orElseThrow(()->new JournalNotFoundException("Journal Not Found !"));
         journalEntryService.deleteById(myId);
         return deleted;
     }
 
-    @PutMapping("/id/{id}")
-    public JournalEntry updatejournalId(@RequestBody JournalEntry newEntry, @PathVariable ObjectId myId){
+    @PutMapping("/{id}")
+    public JournalEntry updatejournalId(@PathVariable("id") ObjectId myId, @RequestBody JournalEntry newEntry){
 
         JournalEntry old = journalEntryService.findById(myId).orElse(null);
 
         if (old!=null){
-            old.setTitle(newEntry.getTitle() != null && newEntry.getTitle().equals(" ")? newEntry.getTitle() : old.getTitle());
-            old.setContent(newEntry.getContent() != null && newEntry.getContent().equals(" ")? newEntry.getContent() : old.getContent());
+            old.setTitle(newEntry.getTitle() != null && !newEntry.getTitle().equals(" ")? newEntry.getTitle() : old.getTitle());
+            old.setContent(newEntry.getContent() != null && !newEntry.getContent().equals(" ")? newEntry.getContent() : old.getContent());
         }
         journalEntryService.saveEntry(old);
         return old;
