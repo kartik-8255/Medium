@@ -1,9 +1,12 @@
 package com.engineeringDigest.journal.controller;
 
 
+import com.engineeringDigest.journal.entity.JournalEntry;
 import com.engineeringDigest.journal.entity.User;
+import com.engineeringDigest.journal.service.JournalEntryService;
 import com.engineeringDigest.journal.service.UserService;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/user")
 
@@ -24,23 +28,30 @@ public class UserControllerV2 {
         return userService.getAll();
     }
 
-    @PostMapping
-    public boolean createNewUser(@RequestBody User new_user){
-        userService.saveEntry(new_user);
-        return true;
 
+    @PostMapping
+    public ResponseEntity<?> createNewUser(@RequestBody User new_user){
+       try {
+
+           userService.saveEntry(new_user);
+           return new ResponseEntity<>("Created new user\n"+new_user.getUserName(),HttpStatus.CREATED);
+       }catch (Exception e){
+           log.error(String.valueOf(e));
+
+           return new ResponseEntity<>("Failed to create User", HttpStatus.INTERNAL_SERVER_ERROR);
+       }
     }
 
-    @PutMapping
-    public ResponseEntity<?> updateUser(@RequestBody User user){
-        User userInDb = userService.findByUserName(user.getUserName());
+    @PutMapping("/{userName}")
+    public ResponseEntity<?> updateUser(@RequestBody User user,@PathVariable String userName){
+        User userInDb = userService.findByUserName(userName);
 
         if (userInDb!=null){
             userInDb.setUserName(user.getUserName());
             userInDb.setPassword(user.getPassword());
             userService.saveEntry(userInDb);
         }
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return new ResponseEntity<>(HttpStatus.OK);
 
     }
 
